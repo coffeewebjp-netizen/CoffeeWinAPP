@@ -1,73 +1,62 @@
 ﻿<Window x:Class="AutoKeyInputApp.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="自動キー／クリック入力" Height="280" Width="360">
+        Title="自動連打ツール v2" Height="380" Width="400">
 	<Grid Margin="10">
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto"/>
-			<!-- 動作選択 -->
 			<RowDefinition Height="Auto"/>
-			<!-- キー入力 -->
 			<RowDefinition Height="Auto"/>
-			<!-- 間隔入力 -->
 			<RowDefinition Height="Auto"/>
-			<!-- 継続時間入力 -->
-			<RowDefinition Height="Auto"/>
-			<!-- ボタン -->
+			<RowDefinition Height="*"/>
 		</Grid.RowDefinitions>
 		<Grid.ColumnDefinitions>
-			<ColumnDefinition Width="Auto"/>
+			<ColumnDefinition Width="100"/>
 			<ColumnDefinition Width="*"/>
 		</Grid.ColumnDefinitions>
 
-		<!-- 動作選択 -->
-		<TextBlock Grid.Row="0" Grid.Column="0"
-				   Text="動作：" VerticalAlignment="Center" Margin="0,0,5,0"/>
-		<ComboBox Grid.Row="0" Grid.Column="1" x:Name="cmbAction"
-				  SelectedIndex="0" Width="200" Margin="0,0,0,5">
-			<ComboBoxItem Content="キー入力"/>
-			<ComboBoxItem Content="クリック"/>
+		<TextBlock Grid.Row="0" Grid.Column="0" Text="モード：" VerticalAlignment="Center"/>
+		<ComboBox Grid.Row="0" Grid.Column="1" x:Name="cmbAction" SelectedIndex="0" SelectionChanged="CmbAction_SelectionChanged" Margin="0,0,0,10">
+			<ComboBoxItem Content="キー連打"/>
+			<ComboBoxItem Content="クリック連打（位置固定）"/>
 		</ComboBox>
 
-		<!-- キー入力 -->
-		<TextBlock Grid.Row="1" Grid.Column="0"
-				   Text="キー：" VerticalAlignment="Center" Margin="0,0,5,0"/>
-		<TextBox Grid.Row="1" Grid.Column="1"
-				 x:Name="txtKey" Width="200"/>
+		<Border Grid.Row="1" Grid.ColumnSpan="2" BorderBrush="Gray" BorderThickness="1" Padding="10" Margin="0,0,0,10" CornerRadius="5">
+			<StackPanel>
+				<StackPanel x:Name="pnlKeySettings">
+					<TextBlock Text="連打したいキーを押してください：" FontWeight="Bold" Margin="0,0,0,5"/>
+					<TextBox x:Name="txtKeyDisplay"
+                             IsReadOnly="True"
+                             Text="（ここにフォーカスしてキーを押す）"
+                             PreviewKeyDown="TxtKeyDisplay_PreviewKeyDown"
+                             Padding="5" Background="#F0F0F0"/>
+					<TextBlock Text="※Escキーでクリア" FontSize="10" Foreground="Gray"/>
+				</StackPanel>
 
-		<!-- 間隔入力 -->
-		<TextBlock Grid.Row="2" Grid.Column="0"
-				   Text="間隔 (ms)：" VerticalAlignment="Center" Margin="0,10,5,0"/>
-		<TextBox Grid.Row="2" Grid.Column="1"
-				 x:Name="txtInterval" Width="200" Margin="0,10,0,0"/>
+				<StackPanel x:Name="pnlMouseSettings" Visibility="Collapsed">
+					<TextBlock Text="クリック位置の設定：" FontWeight="Bold" Margin="0,0,0,5"/>
+					<StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+						<TextBlock Text="X:" VerticalAlignment="Center"/>
+						<TextBox x:Name="txtX" Width="50" Margin="5,0,10,0" IsReadOnly="True" Background="#EEE"/>
+						<TextBlock Text="Y:" VerticalAlignment="Center"/>
+						<TextBox x:Name="txtY" Width="50" Margin="5,0,10,0" IsReadOnly="True" Background="#EEE"/>
+					</StackPanel>
+					<Button x:Name="BtnPickPos" Content="位置を取得する (3秒待機)" Click="BtnPickPos_Click" Background="#DDDDFF"/>
+					<TextBlock x:Name="txtPickStatus" Text="ボタンを押すと3秒後に位置を記憶します" FontSize="10" Foreground="Red" Margin="0,5,0,0"/>
+				</StackPanel>
+			</StackPanel>
+		</Border>
 
-		<!-- 継続時間入力 -->
-		<TextBlock Grid.Row="3" Grid.Column="0"
-				   Text="継続時間 (秒)：" VerticalAlignment="Center" Margin="0,10,5,0"/>
-		<TextBox Grid.Row="3" Grid.Column="1"
-				 x:Name="txtDuration" Width="200" Margin="0,10,0,0"/>
+		<TextBlock Grid.Row="2" Grid.Column="0" Text="間隔 (ms)：" VerticalAlignment="Center"/>
+		<TextBox Grid.Row="2" Grid.Column="1" x:Name="txtInterval" Text="5000" Margin="0,5"/>
 
-		<!-- ボタン群 -->
-		<UniformGrid Grid.Row="4" Grid.ColumnSpan="2"
-					 Columns="3"
-					 HorizontalAlignment="Center"
-					 Margin="0,20,0,0">
-			<Button x:Name="BtnStart"
-					Content="スタート"
-					Click="BtnStart_Click"
-					Padding="8,2"
-					Margin="5,0"/>
-			<Button x:Name="BtnStop"
-					Content="ストップ"
-					Click="BtnStop_Click"
-					IsEnabled="False"
-					Padding="8,2"
-					Margin="5,0"/>
-			<Button x:Name="BtnClear"
-					Content="クリア"
-					Click="BtnClear_Click"
-					Padding="8,2"
-					Margin="5,0"/>
+		<TextBlock Grid.Row="3" Grid.Column="0" Text="継続時間 (秒)：" VerticalAlignment="Center"/>
+		<TextBox Grid.Row="3" Grid.Column="1" x:Name="txtDuration" Text="0" Margin="0,5"/>
+		<TextBlock Grid.Row="3" Grid.Column="1" Text="※0で無制限" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="Gray" IsHitTestVisible="False"/>
+
+		<UniformGrid Grid.Row="4" Grid.ColumnSpan="2" Columns="2" Margin="0,15,0,0" VerticalAlignment="Top">
+			<Button x:Name="BtnStart" Content="スタート" Click="BtnStart_Click" Height="40" Margin="0,0,5,0" Background="#CCFFCC"/>
+			<Button x:Name="BtnStop" Content="ストップ" Click="BtnStop_Click" Height="40" Margin="5,0,0,0" IsEnabled="False" Background="#FFCCCC"/>
 		</UniformGrid>
 	</Grid>
 </Window>
