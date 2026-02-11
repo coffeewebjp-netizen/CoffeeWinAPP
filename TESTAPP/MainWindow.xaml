@@ -8,6 +8,7 @@
 			<RowDefinition Height="Auto"/>
 			<RowDefinition Height="Auto"/>
 			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
 			<RowDefinition Height="*"/>
 		</Grid.RowDefinitions>
 		<Grid.ColumnDefinitions>
@@ -15,13 +16,25 @@
 			<ColumnDefinition Width="*"/>
 		</Grid.ColumnDefinitions>
 
-		<TextBlock Grid.Row="0" Grid.Column="0" Text="モード：" VerticalAlignment="Center"/>
-		<ComboBox Grid.Row="0" Grid.Column="1" x:Name="cmbAction" SelectedIndex="0" SelectionChanged="CmbAction_SelectionChanged" Margin="0,0,0,10">
+		<TextBlock Grid.Row="0" Grid.Column="0" Text="プリセット：" VerticalAlignment="Center"/>
+		<Grid Grid.Row="0" Grid.Column="1" Margin="0,0,0,10">
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="*"/>
+				<ColumnDefinition Width="Auto"/>
+				<ColumnDefinition Width="Auto"/>
+			</Grid.ColumnDefinitions>
+			<ComboBox Grid.Column="0" x:Name="cmbPresets" SelectionChanged="CmbPresets_SelectionChanged" Margin="0,0,5,0"/>
+			<Button Grid.Column="1" Content="保存" Click="BtnSavePreset_Click" Width="50" Margin="0,0,5,0"/>
+			<Button Grid.Column="2" Content="削除" Click="BtnDeletePreset_Click" Width="50"/>
+		</Grid>
+
+		<TextBlock Grid.Row="1" Grid.Column="0" Text="モード：" VerticalAlignment="Center"/>
+		<ComboBox Grid.Row="1" Grid.Column="1" x:Name="cmbAction" SelectedIndex="0" SelectionChanged="CmbAction_SelectionChanged" Margin="0,0,0,10">
 			<ComboBoxItem Content="キー連打"/>
 			<ComboBoxItem Content="クリック連打（位置固定）"/>
 		</ComboBox>
 
-		<Border Grid.Row="1" Grid.ColumnSpan="2" BorderBrush="Gray" BorderThickness="1" Padding="10" Margin="0,0,0,10" CornerRadius="5">
+		<Border Grid.Row="2" Grid.ColumnSpan="2" BorderBrush="Gray" BorderThickness="1" Padding="10" Margin="0,0,0,10" CornerRadius="5">
 			<StackPanel>
 				<StackPanel x:Name="pnlKeySettings">
 					<TextBlock Text="連打したいキーを押してください：" FontWeight="Bold" Margin="0,0,0,5"/>
@@ -47,14 +60,14 @@
 			</StackPanel>
 		</Border>
 
-		<TextBlock Grid.Row="2" Grid.Column="0" Text="間隔 (ms)：" VerticalAlignment="Center"/>
-		<TextBox Grid.Row="2" Grid.Column="1" x:Name="txtInterval" Text="5000" Margin="0,5"/>
+		<TextBlock Grid.Row="3" Grid.Column="0" Text="間隔 (ms)：" VerticalAlignment="Center"/>
+		<TextBox Grid.Row="3" Grid.Column="1" x:Name="txtInterval" Text="10000" Margin="0,5"/>
 
-		<TextBlock Grid.Row="3" Grid.Column="0" Text="継続時間 (秒)：" VerticalAlignment="Center"/>
-		<TextBox Grid.Row="3" Grid.Column="1" x:Name="txtDuration" Text="0" Margin="0,5"/>
-		<TextBlock Grid.Row="3" Grid.Column="1" Text="※0で無制限" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="Gray" IsHitTestVisible="False"/>
+		<TextBlock Grid.Row="4" Grid.Column="0" Text="継続時間 (秒)：" VerticalAlignment="Center"/>
+		<TextBox Grid.Row="4" Grid.Column="1" x:Name="txtDuration" Text="0" Margin="0,5"/>
+		<TextBlock Grid.Row="4" Grid.Column="1" Text="※0で無制限" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="Gray" IsHitTestVisible="False"/>
 
-		<UniformGrid Grid.Row="4" Grid.ColumnSpan="2" Columns="2" Margin="0,15,0,0" VerticalAlignment="Top">
+		<UniformGrid Grid.Row="5" Grid.ColumnSpan="2" Columns="2" Margin="0,15,0,0" VerticalAlignment="Top">
 			<Button x:Name="BtnStart" Content="スタート" Click="BtnStart_Click" Height="40" Margin="0,0,5,0" Background="#CCFFCC"/>
 			<Button x:Name="BtnStop" Content="ストップ" Click="BtnStop_Click" Height="40" Margin="5,0,0,0" IsEnabled="False" Background="#FFCCCC"/>
 		</UniformGrid>

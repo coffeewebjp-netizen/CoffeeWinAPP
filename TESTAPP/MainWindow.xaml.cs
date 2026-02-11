@@ -7,6 +7,8 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using GregsStack.InputSimulatorStandard;
 using GregsStack.InputSimulatorStandard.Native;
+using Microsoft.VisualBasic;
+using System.Collections.Generic;
 
 namespace AutoKeyInputApp
 {
@@ -20,6 +22,9 @@ namespace AutoKeyInputApp
         private System.Windows.Point _targetPoint;
         private DateTime _startTime;
         private int _durationSeconds;
+
+        // プリセット用変数
+        private List<Preset> _presets = new List<Preset>();
 
         // --- Windows API (外部DLL) の読み込み ---
         // マウスの座標を取得・設定するために user32.dll の機能を使います
@@ -40,6 +45,85 @@ namespace AutoKeyInputApp
         {
             InitializeComponent();
             _timer.Tick += Timer_Tick;
+            
+            // プリセット読み込みとUI反映
+            _presets = PresetManager.LoadPresets();
+            LoadPresetsToUI();
+        }
+
+        private void LoadPresetsToUI()
+        {
+            cmbPresets.ItemsSource = null;
+            cmbPresets.ItemsSource = _presets;
+        }
+
+        private void BtnSavePreset_Click(object sender, RoutedEventArgs e)
+        {
+            // 入力ダイアログ (VB.NETの機能を使用)
+            string name = Interaction.InputBox("プリセット名を入力してください", "設定の保存", "設定1");
+            if (string.IsNullOrWhiteSpace(name)) return;
+
+            // 現在の設定を取得
+            var preset = new Preset
+            {
+                Name = name,
+                ModeIndex = cmbAction.SelectedIndex,
+                TargetKey = _targetKey,
+                TargetPoint = new System.Windows.Point(
+                    string.IsNullOrEmpty(txtX.Text) ? 0 : int.Parse(txtX.Text),
+                    string.IsNullOrEmpty(txtY.Text) ? 0 : int.Parse(txtY.Text)),
+                IntervalText = txtInterval.Text,
+                DurationText = txtDuration.Text
+            };
+
+            // 同名があれば上書き、なければ追加
+            var existing = _presets.Find(p => p.Name == name);
+            if (existing != null)
+            {
+                _presets.Remove(existing);
+            }
+            _presets.Add(preset);
+
+            PresetManager.SavePresets(_presets);
+            LoadPresetsToUI();
+            cmbPresets.SelectedItem = preset;
+            MessageBox.Show("設定を保存しました。", "完了");
+        }
+
+        private void BtnDeletePreset_Click(object sender, RoutedEventArgs e)
+        {
+            if (cmbPresets.SelectedItem is Preset selected)
+            {
+                if (MessageBox.Show($"プリセット「{selected.Name}」を削除しますか？", "確認", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                {
+                    _presets.Remove(selected);
+                    PresetManager.SavePresets(_presets);
+                    LoadPresetsToUI();
+                }
+            }
+        }
+
+        private void CmbPresets_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (cmbPresets.SelectedItem is Preset selected)
+            {
+                // UIに反映
+                cmbAction.SelectedIndex = selected.ModeIndex;
+                if (selected.ModeIndex == 0) // Key
+                {
+                    _targetKey = selected.TargetKey;
+                    var key = KeyInterop.KeyFromVirtualKey((int)_targetKey);
+                    txtKeyDisplay.Text = $"{key} (コード: {_targetKey})";
+                }
+                else // Mouse
+                {
+                    _targetPoint = selected.TargetPoint;
+                    txtX.Text = selected.TargetPoint.X.ToString();
+                    txtY.Text = selected.TargetPoint.Y.ToString();
+                }
+                txtInterval.Text = selected.IntervalText;
+                txtDuration.Text = selected.DurationText;
+            }
         }
 
         // --- UI切り替え ---
@@ -159,11 +243,17 @@ namespace AutoKeyInputApp
                 else
                 {
                     // クリック連打
-                    // 1. 指定座標へ瞬間移動 (SetCursorPosを使用することでマルチモニタ対応)
+                    // 1. 現在の位置を記憶
+                    GetCursorPos(out POINT currentPos);
+
+                    // 2. 指定座標へ瞬間移動
                     SetCursorPos((int)_targetPoint.X, (int)_targetPoint.Y);
 
-                    // 2. 左クリック実行
+                    // 3. 左クリック実行
                     _simulator.Mouse.LeftButtonClick();
+
+                    // 4. 元の位置へ戻す
+                    SetCursorPos(currentPos.X, currentPos.Y);
                 }
 
                 // 時間切れチェック
