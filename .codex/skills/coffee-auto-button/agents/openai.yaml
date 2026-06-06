@@ -1,0 +1,4 @@
+interface:
+  display_name: "Coffee AutoButton"
+  short_description: "Coffee AutoButton project guide"
+  default_prompt: "Use this skill when working on the Coffee AutoButton WPF app."

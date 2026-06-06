@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace TESTAPP.Properties {
+namespace CoffeeAutoButton.Properties {
     
     
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
@@ -24,3 +24,4 @@ namespace TESTAPP.Properties {
         }
     }
 }
+

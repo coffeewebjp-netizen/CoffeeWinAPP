@@ -1,0 +1,172 @@
+﻿<Window x:Class="CoffeeAutoButton.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Coffee AutoButton"
+        Height="820"
+        Width="520"
+        MinHeight="720"
+        MinWidth="500"
+        Background="{StaticResource WindowBackgroundBrush}">
+	<ScrollViewer VerticalScrollBarVisibility="Auto">
+	<Grid Margin="18">
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="*"/>
+			<RowDefinition Height="Auto"/>
+		</Grid.RowDefinitions>
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="112"/>
+			<ColumnDefinition Width="*"/>
+		</Grid.ColumnDefinitions>
+
+		<TextBlock Grid.Row="0" Grid.Column="0" Text="プリセット：" VerticalAlignment="Center"/>
+		<Grid Grid.Row="0" Grid.Column="1" Margin="0,0,0,10">
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="*"/>
+				<ColumnDefinition Width="Auto"/>
+				<ColumnDefinition Width="Auto"/>
+			</Grid.ColumnDefinitions>
+			<ComboBox Grid.Column="0" x:Name="cmbPresets" SelectionChanged="CmbPresets_SelectionChanged" Margin="0,0,8,0"/>
+			<Button Grid.Column="1" Content="保存" Click="BtnSavePreset_Click" Width="58" Margin="0,0,6,0"/>
+			<Button Grid.Column="2" Content="削除" Click="BtnDeletePreset_Click" Width="58"/>
+		</Grid>
+
+		<TextBlock Grid.Row="1" Grid.Column="0" Text="モード：" VerticalAlignment="Center"/>
+		<ComboBox Grid.Row="1" Grid.Column="1" x:Name="cmbAction" SelectedIndex="0" SelectionChanged="CmbAction_SelectionChanged" Margin="0,0,0,10">
+			<ComboBoxItem Content="キー連打"/>
+			<ComboBoxItem Content="クリック連打（位置固定）"/>
+		</ComboBox>
+
+		<Border Grid.Row="2" Grid.ColumnSpan="2" Style="{StaticResource SectionBorderStyle}">
+			<StackPanel>
+				<StackPanel x:Name="pnlKeySettings">
+					<TextBlock Text="連打したいキーを押してください：" FontWeight="Bold" Margin="0,0,0,5"/>
+					<TextBox x:Name="txtKeyDisplay"
+                             IsReadOnly="True"
+                             Text="（ここにフォーカスしてキーを押す）"
+                             PreviewKeyDown="TxtKeyDisplay_PreviewKeyDown"
+                             Padding="5"/>
+					<TextBlock Text="※Escキーでクリア" Style="{StaticResource HintTextStyle}"/>
+					<TextBlock Text="キーシーケンス：" FontWeight="Bold" Margin="0,8,0,5"/>
+					<TextBox x:Name="txtKeySequence"
+                             TextChanged="PersistedSetting_TextChanged"
+                             ToolTip="例: A, Enter, Space"
+                             Padding="5"
+                             Margin="0,0,0,5"/>
+					<TextBlock Text="修飾キー：" FontWeight="Bold" Margin="0,8,0,5"/>
+					<UniformGrid Columns="4" Margin="0,0,0,5">
+						<CheckBox x:Name="chkKeyCtrl" Content="Ctrl" Checked="PersistedSetting_Changed" Unchecked="PersistedSetting_Changed"/>
+						<CheckBox x:Name="chkKeyShift" Content="Shift" Checked="PersistedSetting_Changed" Unchecked="PersistedSetting_Changed"/>
+						<CheckBox x:Name="chkKeyAlt" Content="Alt" Checked="PersistedSetting_Changed" Unchecked="PersistedSetting_Changed"/>
+						<CheckBox x:Name="chkKeyWin" Content="Win" Checked="PersistedSetting_Changed" Unchecked="PersistedSetting_Changed"/>
+					</UniformGrid>
+					<TextBlock Text="キー動作：" FontWeight="Bold" Margin="0,5,0,5"/>
+					<ComboBox x:Name="cmbKeyAction" SelectedIndex="0" SelectionChanged="PersistedSetting_SelectionChanged" Margin="0,0,0,5">
+						<ComboBoxItem Content="キー押下"/>
+						<ComboBoxItem Content="キー長押し"/>
+					</ComboBox>
+					<StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+						<TextBlock Text="長押し (ms):" VerticalAlignment="Center"/>
+						<TextBox x:Name="txtKeyHoldDuration" Text="500" TextChanged="PersistedSetting_TextChanged" Width="70" Margin="8,0,0,0"/>
+					</StackPanel>
+				</StackPanel>
+
+				<StackPanel x:Name="pnlMouseSettings" Visibility="Collapsed">
+					<TextBlock Text="クリック位置の設定：" FontWeight="Bold" Margin="0,0,0,5"/>
+					<StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+						<TextBlock Text="X:" VerticalAlignment="Center"/>
+						<TextBox x:Name="txtX" Width="56" Margin="5,0,10,0" IsReadOnly="True"/>
+						<TextBlock Text="Y:" VerticalAlignment="Center"/>
+						<TextBox x:Name="txtY" Width="56" Margin="5,0,10,0" IsReadOnly="True"/>
+					</StackPanel>
+					<TextBlock Text="クリック方式：" FontWeight="Bold" Margin="0,5,0,5"/>
+					<ComboBox x:Name="cmbClickMethod" SelectedIndex="0" SelectionChanged="PersistedSetting_SelectionChanged" Margin="0,0,0,5">
+						<ComboBoxItem Content="非干渉クリック（ブラウザ直接／専用ブラウザ推奨）"/>
+						<ComboBoxItem Content="物理クリック（互換性優先）"/>
+					</ComboBox>
+					<TextBlock Text="クリック種別：" FontWeight="Bold" Margin="0,5,0,5"/>
+					<ComboBox x:Name="cmbClickAction" SelectedIndex="0" SelectionChanged="PersistedSetting_SelectionChanged" Margin="0,0,0,5">
+						<ComboBoxItem Content="左クリック"/>
+						<ComboBoxItem Content="右クリック"/>
+						<ComboBoxItem Content="左ダブルクリック"/>
+						<ComboBoxItem Content="左長押し"/>
+					</ComboBox>
+					<StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+						<TextBlock Text="長押し (ms):" VerticalAlignment="Center"/>
+						<TextBox x:Name="txtHoldDuration" Text="500" TextChanged="PersistedSetting_TextChanged" Width="70" Margin="8,0,0,0"/>
+					</StackPanel>
+					<CheckBox x:Name="chkAutoFallbackToPhysical"
+                              Content="非干渉失敗時に物理クリックを許可（カーソル移動あり）"
+                              IsChecked="False"
+                              Checked="PersistedSetting_Changed"
+                              Unchecked="PersistedSetting_Changed"
+                              Margin="0,0,0,5"/>
+					<TextBlock Text="専用ブラウザURL：" FontWeight="Bold" Margin="0,5,0,5"/>
+					<TextBox x:Name="txtDedicatedBrowserUrl"
+                             TextChanged="PersistedSetting_TextChanged"
+                             ToolTip="空欄の場合は about:blank を開きます"
+                             Padding="5"
+                             Margin="0,0,0,5"/>
+					<UniformGrid Columns="3" Margin="0,0,0,0">
+						<Button x:Name="BtnLaunchBrowser" Content="専用ブラウザ" Click="BtnLaunchBrowser_Click" Background="#E0F2FE" Margin="0,0,6,0"/>
+						<Button x:Name="BtnPickPos" Content="位置を取得する (3秒待機)" Click="BtnPickPos_Click" Background="{StaticResource AccentSoftBrush}" Margin="0,0,6,0"/>
+						<Button x:Name="BtnTestNonIntrusiveClick" Content="非干渉テスト" Click="BtnTestNonIntrusiveClick_Click" Background="#DCFCE7" Margin="6,0,0,0"/>
+					</UniformGrid>
+					<TextBlock x:Name="txtPickStatus" Text="ボタンを押すと3秒後に位置を記憶します" Style="{StaticResource StatusWarningTextStyle}" Margin="0,6,0,0"/>
+					<TextBlock x:Name="txtTargetInfo" Text="対象: 未設定" Style="{StaticResource HintTextStyle}" Margin="0,5,0,0" TextWrapping="Wrap"/>
+				</StackPanel>
+			</StackPanel>
+		</Border>
+
+		<TextBlock Grid.Row="3" Grid.Column="0" Text="間隔 (ms)：" VerticalAlignment="Center"/>
+		<TextBox Grid.Row="3" Grid.Column="1" x:Name="txtInterval" Text="10000" TextChanged="PersistedSetting_TextChanged" Margin="0,5"/>
+
+		<TextBlock Grid.Row="4" Grid.Column="0" Text="継続時間 (秒)：" VerticalAlignment="Center"/>
+		<TextBox Grid.Row="4" Grid.Column="1" x:Name="txtDuration" Text="0" TextChanged="PersistedSetting_TextChanged" Margin="0,5"/>
+		<TextBlock Grid.Row="4" Grid.Column="1" Text="※0で無制限" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,8,0" Style="{StaticResource HintTextStyle}" IsHitTestVisible="False"/>
+
+		<TextBlock Grid.Row="5" Grid.Column="0" Text="開始待機 (秒)：" VerticalAlignment="Center"/>
+		<TextBox Grid.Row="5" Grid.Column="1" x:Name="txtStartDelay" Text="0" TextChanged="PersistedSetting_TextChanged" Margin="0,5"/>
+
+		<TextBlock Grid.Row="6" Grid.Column="0" Text="ホットキー：" VerticalAlignment="Center"/>
+		<Grid Grid.Row="6" Grid.Column="1" Margin="0,5">
+			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="Auto"/>
+			</Grid.RowDefinitions>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="90"/>
+				<ColumnDefinition Width="*"/>
+			</Grid.ColumnDefinitions>
+			<TextBlock Grid.Row="0" Grid.Column="0" Text="停止" VerticalAlignment="Center" Margin="0,0,5,3"/>
+			<TextBox Grid.Row="0" Grid.Column="1" x:Name="txtStopHotkey" IsReadOnly="True" PreviewKeyDown="TxtStopHotkey_PreviewKeyDown" Padding="4" Margin="0,0,0,3"/>
+			<TextBlock Grid.Row="1" Grid.Column="0" Text="一時停止" VerticalAlignment="Center" Margin="0,3,5,0"/>
+			<TextBox Grid.Row="1" Grid.Column="1" x:Name="txtPauseHotkey" IsReadOnly="True" PreviewKeyDown="TxtPauseHotkey_PreviewKeyDown" Padding="4" Margin="0,3,0,0"/>
+		</Grid>
+
+		<TextBlock Grid.Row="7" Grid.Column="0" Text="状態：" VerticalAlignment="Center"/>
+		<TextBlock Grid.Row="7" Grid.Column="1" x:Name="txtRunStatus" Text="待機中" Margin="0,5" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap"/>
+
+		<UniformGrid Grid.Row="8" Grid.ColumnSpan="2" Columns="3" Margin="0,15,0,0" VerticalAlignment="Top">
+			<Button x:Name="BtnStart" Content="スタート" Click="BtnStart_Click" Height="42" Margin="0,0,6,0" Background="{StaticResource SuccessBrush}"/>
+			<Button x:Name="BtnPauseResume" Content="一時停止" Click="BtnPauseResume_Click" Height="42" Margin="6,0,6,0" IsEnabled="False" Background="{StaticResource WarningBrush}"/>
+			<Button x:Name="BtnStop" Content="ストップ" Click="BtnStop_Click" Height="42" Margin="6,0,0,0" IsEnabled="False" Background="{StaticResource DangerBrush}"/>
+		</UniformGrid>
+		<TextBlock Grid.Row="9"
+                   Grid.ColumnSpan="2"
+                   x:Name="txtVersion"
+                   Text="Version"
+                   Style="{StaticResource HintTextStyle}"
+                   HorizontalAlignment="Right"
+                   Margin="0,10,0,0"/>
+	</Grid>
+	</ScrollViewer>
+</Window>
+

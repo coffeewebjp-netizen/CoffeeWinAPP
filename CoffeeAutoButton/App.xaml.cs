@@ -2,7 +2,7 @@
 using System.Data;
 using System.Windows;
 
-namespace TESTAPP
+namespace CoffeeAutoButton
 {
     /// <summary>
     /// Interaction logic for App.xaml
@@ -12,3 +12,4 @@ namespace TESTAPP
     }
 
 }
+

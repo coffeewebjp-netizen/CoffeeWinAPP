@@ -32,6 +32,7 @@ x86/
 bld/
 [Bb]in/
 [Oo]bj/
+[Pp]ublish/
 [Ll]og/
 [Ll]ogs/
 
@@ -64,6 +65,11 @@ BenchmarkDotNet.Artifacts/
 project.lock.json
 project.fragment.lock.json
 artifacts/
+[Ii]nstaller/[Oo]ut/
+[Ii]nstaller/[Pp]ayload/
+[Ii]nstaller/*.sed
+.tools/
+.wix/
 
 # Tye
 .tye/
