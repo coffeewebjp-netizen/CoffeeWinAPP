@@ -2,7 +2,7 @@
 
 この文書は Coffee AutoButton の現在仕様と改良方針を固定するための設計メモです。
 
-現在の実装メモ: v1.0.8
+現在の実装メモ: v1.0.10
 
 ## 目的
 
@@ -35,6 +35,7 @@ Chromium 系では専用ブラウザ CDP 方式だけを使います。専用ブ
 実装条件:
 
 - 専用ブラウザは CDP ポート `9223` で起動する。
+- CDP 探索は `127.0.0.1:9223` と `[::1]:9223` の両方を確認する。CoffeeBook など同じポートを使う別ツールとの同時利用時に、片方が IPv4、もう片方が IPv6 ループバックへ分かれる場合があるため。
 - プロファイルは `%APPDATA%\CoffeeAutoButton\dedicated-browser-profile` を使う。
 - 位置取得時に `BrowserClickTarget` を解決し、CDP の `targetId`、URL、タイトルを保持する。
 - クリック送信時は保持した `BrowserClickTarget` を再解決してから `Input.dispatchMouseEvent` を送る。

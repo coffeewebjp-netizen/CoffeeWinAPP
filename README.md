@@ -2,7 +2,7 @@
 
 Coffee AutoButton は Windows 向けの自動入力ツールです。キー入力や固定位置クリックを一定間隔で繰り返しつつ、作業中のマウス位置やアクティブウィンドウをできるだけ奪わないことを重視しています。
 
-現在の実装メモ: v1.0.8
+現在の実装メモ: v1.0.10
 
 ## コンセプト
 
@@ -40,6 +40,8 @@ Chrome 系ブラウザへの非干渉クリックは、通常の Chrome ウィ�
 
 Chrome 系ブラウザが専用ブラウザとして認識されていない場合、アプリは Chrome へクリックを送信しません。これはフォーカスを奪う `PostMessage` や物理クリックへ勝手に戻らないための仕様です。
 
+CoffeeBook など同じ `9223` の CDP ポートを使うツールと同時利用する場合があります。そのため Coffee AutoButton は `127.0.0.1:9223` と `[::1]:9223` の両方を確認し、取得したウィンドウ情報、タイトル、URL に合う専用ブラウザタブを選びます。
+
 ## クリック方式
 
 - 専用ブラウザ CDP 方式: Chrome 系ブラウザ用。カーソル移動やフォーカス取得を行わず、`Input.dispatchMouseEvent` でクリックを送信します。
@@ -48,7 +50,7 @@ Chrome 系ブラウザが専用ブラウザとして認識されていない場�
 
 ## バージョン確認
 
-アプリのタイトルバーと画面下部にバージョンが表示されます。v1.0.8 以降は、起動中の画面から現在版を確認できます。
+アプリのタイトルバーと画面下部にバージョンが表示されます。v1.0.10 以降は、起動中の画面から現在版を確認できます。
 
 ## 設定保存
 
@@ -75,7 +77,7 @@ dotnet build .\CoffeeAutoButton.sln
 出力先がロックされている場合は、バージョン付きの別フォルダを使います。
 
 ```powershell
-.\tools\publish.ps1 -OutputPath "publish\CoffeeAutoButton-1.0.8"
+.\tools\publish.ps1 -OutputPath "publish\CoffeeAutoButton-1.0.10"
 ```
 
 ## Installer
@@ -89,7 +91,7 @@ MSI は次のコマンドで生成します。
 特定の publish フォルダから MSI を作る場合:
 
 ```powershell
-.\tools\build-msi.ps1 -PublishPath "publish\CoffeeAutoButton-1.0.8"
+.\tools\build-msi.ps1 -PublishPath "publish\CoffeeAutoButton-1.0.10"
 ```
 
 出力先:

@@ -1,7 +1,7 @@
 param(
     [string]$Configuration = "Release",
     [string]$Runtime = "win-x64",
-    [string]$Version = "1.0.8",
+    [string]$Version = "1.0.10",
     [string]$PublishPath = "publish\CoffeeAutoButton",
     [string]$OutputPath = "installer\out\CoffeeAutoButtonSetup.msi",
     [switch]$InstallWixTool

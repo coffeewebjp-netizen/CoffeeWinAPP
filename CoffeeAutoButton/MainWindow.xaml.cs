@@ -1151,10 +1151,20 @@ namespace CoffeeAutoButton
                 return;
             }
 
+            var screenPoint = new POINT
+            {
+                X = (int)_targetPoint.X,
+                Y = (int)_targetPoint.Y
+            };
+            var targetWindowRect = _hasTargetWindowRect
+                ? _targetWindowRect
+                : (RECT?)null;
             var target = await _browserDirectClickService.TryResolveTargetAsync(
                 _targetWindowTitle,
                 _targetProcessName,
                 DedicatedBrowserDebugPort,
+                screenPoint,
+                targetWindowRect,
                 CancellationToken.None);
             if (target is null)
             {

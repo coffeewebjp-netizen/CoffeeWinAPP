@@ -47,15 +47,15 @@ namespace CoffeeAutoButton
     internal sealed class BrowserDirectClickService
     {
         private static readonly int[] DebugPorts = { 9223, 9222, 9224, 9225 };
+        private static readonly string[] LoopbackHosts = { "127.0.0.1", "[::1]" };
         private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true
         };
 
-        private const int ProbeTimeoutMs = 180;
-        private const int ProbeBackoffMs = 5000;
+        private const int ProbeTimeoutMs = 1000;
+        private const int WindowBoundsTolerance = 96;
 
-        private DateTime _lastProbeFailedAtUtc = DateTime.MinValue;
         private int? _lastWorkingPort;
 
         internal async Task<BrowserClickTarget> TryResolveTargetAsync(
@@ -64,19 +64,37 @@ namespace CoffeeAutoButton
             int preferredPort,
             CancellationToken cancellationToken)
         {
-            if (!IsChromiumProcess(processName) && string.IsNullOrWhiteSpace(targetTitle))
-            {
-                return null;
-            }
+            return await TryResolveTargetAsync(
+                targetTitle,
+                processName,
+                preferredPort,
+                null,
+                null,
+                cancellationToken);
+        }
 
-            if (DateTime.UtcNow - _lastProbeFailedAtUtc < TimeSpan.FromMilliseconds(ProbeBackoffMs))
+        internal async Task<BrowserClickTarget> TryResolveTargetAsync(
+            string targetTitle,
+            string processName,
+            int preferredPort,
+            POINT? screenPoint,
+            RECT? targetWindowRect,
+            CancellationToken cancellationToken)
+        {
+            if (!IsChromiumProcess(processName) && string.IsNullOrWhiteSpace(targetTitle))
             {
                 return null;
             }
 
             foreach (var port in GetProbePorts(preferredPort))
             {
-                var target = await FindTargetAsync(port, targetTitle, processName, cancellationToken);
+                var target = await FindTargetAsync(
+                    port,
+                    targetTitle,
+                    processName,
+                    screenPoint,
+                    targetWindowRect,
+                    cancellationToken);
                 if (target is null)
                 {
                     continue;
@@ -86,7 +104,6 @@ namespace CoffeeAutoButton
                 return target;
             }
 
-            _lastProbeFailedAtUtc = DateTime.UtcNow;
             return null;
         }
 
@@ -126,19 +143,17 @@ namespace CoffeeAutoButton
             if (preferredPort > 0)
             {
                 yield return preferredPort;
+                yield break;
             }
 
             if (_lastWorkingPort is int rememberedPort)
             {
-                if (rememberedPort != preferredPort)
-                {
-                    yield return rememberedPort;
-                }
+                yield return rememberedPort;
             }
 
             foreach (var port in DebugPorts)
             {
-                if (port != preferredPort && port != _lastWorkingPort)
+                if (port != _lastWorkingPort)
                 {
                     yield return port;
                 }
@@ -149,6 +164,8 @@ namespace CoffeeAutoButton
             int port,
             string targetTitle,
             string processName,
+            POINT? screenPoint,
+            RECT? targetWindowRect,
             CancellationToken cancellationToken)
         {
             var targets = await GetTargetsAsync(port, cancellationToken);
@@ -172,17 +189,196 @@ namespace CoffeeAutoButton
             var normalizedTitle = NormalizeTitle(targetTitle);
             if (!string.IsNullOrWhiteSpace(normalizedTitle))
             {
-                var matched = pageTargets.FirstOrDefault(target =>
-                    IsTitleMatch(NormalizeTitle(target.Title), normalizedTitle));
-                if (matched is not null)
+                var titleMatches = pageTargets
+                    .Where(target => IsTitleMatch(NormalizeTitle(target.Title), normalizedTitle))
+                    .ToList();
+                if (titleMatches.Count == 1)
                 {
-                    return CreateClickTarget(port, matched);
+                    return CreateClickTarget(port, titleMatches[0]);
                 }
+
+                if (titleMatches.Count > 1)
+                {
+                    var boundedTitleMatch = await TryFindTargetByWindowBoundsAsync(
+                        titleMatches,
+                        normalizedTitle,
+                        screenPoint,
+                        targetWindowRect,
+                        cancellationToken);
+                    return CreateClickTarget(port, boundedTitleMatch ?? titleMatches[0]);
+                }
+            }
+
+            var boundedMatch = await TryFindTargetByWindowBoundsAsync(
+                pageTargets,
+                normalizedTitle,
+                screenPoint,
+                targetWindowRect,
+                cancellationToken);
+            if (boundedMatch is not null)
+            {
+                return CreateClickTarget(port, boundedMatch);
             }
 
             return IsChromiumProcess(processName) && pageTargets.Count == 1
                 ? CreateClickTarget(port, pageTargets[0])
                 : null;
+        }
+
+        private static async Task<BrowserDebugTarget> TryFindTargetByWindowBoundsAsync(
+            List<BrowserDebugTarget> pageTargets,
+            string normalizedTitle,
+            POINT? screenPoint,
+            RECT? targetWindowRect,
+            CancellationToken cancellationToken)
+        {
+            if ((screenPoint is null && targetWindowRect is null) || pageTargets.Count == 0)
+            {
+                return null;
+            }
+
+            var candidates = new List<BrowserWindowTargetCandidate>();
+            foreach (var pageTarget in pageTargets)
+            {
+                var bounds = await TryGetWindowBoundsAsync(pageTarget, cancellationToken);
+                if (bounds is null)
+                {
+                    continue;
+                }
+
+                var score = ScoreWindowBounds(bounds.Value, screenPoint, targetWindowRect);
+                if (score <= 0)
+                {
+                    continue;
+                }
+
+                if (!string.IsNullOrWhiteSpace(normalizedTitle)
+                    && IsTitleMatch(NormalizeTitle(pageTarget.Title), normalizedTitle))
+                {
+                    score += 100;
+                }
+
+                candidates.Add(new BrowserWindowTargetCandidate(pageTarget, score));
+            }
+
+            if (candidates.Count == 0)
+            {
+                return null;
+            }
+
+            var ordered = candidates
+                .OrderByDescending(candidate => candidate.Score)
+                .ToList();
+            if (ordered.Count > 1 && ordered[0].Score == ordered[1].Score)
+            {
+                return null;
+            }
+
+            return ordered[0].Target;
+        }
+
+        private static async Task<BrowserWindowBounds?> TryGetWindowBoundsAsync(
+            BrowserDebugTarget target,
+            CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(target.WebSocketDebuggerUrl))
+            {
+                return null;
+            }
+
+            try
+            {
+                using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                timeoutCts.CancelAfter(ProbeTimeoutMs);
+                await using var session = await CdpPageSession.ConnectAsync(target.WebSocketDebuggerUrl, timeoutCts.Token);
+                var result = await session.SendCommandAsync(
+                    "Browser.getWindowForTarget",
+                    null,
+                    timeoutCts.Token);
+
+                if (!result.TryGetProperty("bounds", out var bounds))
+                {
+                    return null;
+                }
+
+                var left = TryGetInt(bounds, "left", int.MinValue);
+                var top = TryGetInt(bounds, "top", int.MinValue);
+                var width = TryGetInt(bounds, "width", 0);
+                var height = TryGetInt(bounds, "height", 0);
+                if (left == int.MinValue || top == int.MinValue || width <= 0 || height <= 0)
+                {
+                    return null;
+                }
+
+                return new BrowserWindowBounds(left, top, left + width, top + height);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static int ScoreWindowBounds(
+            BrowserWindowBounds bounds,
+            POINT? screenPoint,
+            RECT? targetWindowRect)
+        {
+            var score = 0;
+            if (screenPoint.HasValue && IsPointInside(bounds, screenPoint.Value, WindowBoundsTolerance))
+            {
+                score += 70;
+            }
+
+            if (targetWindowRect.HasValue)
+            {
+                var rect = targetWindowRect.Value;
+                if (IsSimilarBounds(bounds, rect, WindowBoundsTolerance))
+                {
+                    score += 90;
+                }
+                else if (HasMeaningfulOverlap(bounds, rect))
+                {
+                    score += 40;
+                }
+            }
+
+            return score;
+        }
+
+        private static bool IsPointInside(BrowserWindowBounds bounds, POINT point, int tolerance)
+        {
+            return point.X >= bounds.Left - tolerance
+                && point.X <= bounds.Right + tolerance
+                && point.Y >= bounds.Top - tolerance
+                && point.Y <= bounds.Bottom + tolerance;
+        }
+
+        private static bool IsSimilarBounds(BrowserWindowBounds bounds, RECT rect, int tolerance)
+        {
+            return Math.Abs(bounds.Left - rect.Left) <= tolerance
+                && Math.Abs(bounds.Top - rect.Top) <= tolerance
+                && Math.Abs(bounds.Right - rect.Right) <= tolerance
+                && Math.Abs(bounds.Bottom - rect.Bottom) <= tolerance;
+        }
+
+        private static bool HasMeaningfulOverlap(BrowserWindowBounds bounds, RECT rect)
+        {
+            var overlapLeft = Math.Max(bounds.Left, rect.Left);
+            var overlapTop = Math.Max(bounds.Top, rect.Top);
+            var overlapRight = Math.Min(bounds.Right, rect.Right);
+            var overlapBottom = Math.Min(bounds.Bottom, rect.Bottom);
+            var overlapWidth = Math.Max(0, overlapRight - overlapLeft);
+            var overlapHeight = Math.Max(0, overlapBottom - overlapTop);
+            if (overlapWidth == 0 || overlapHeight == 0)
+            {
+                return false;
+            }
+
+            var overlapArea = (long)overlapWidth * overlapHeight;
+            var boundsArea = (long)Math.Max(0, bounds.Right - bounds.Left) * Math.Max(0, bounds.Bottom - bounds.Top);
+            var rectArea = (long)Math.Max(0, rect.Right - rect.Left) * Math.Max(0, rect.Bottom - rect.Top);
+            var smallerArea = Math.Min(boundsArea, rectArea);
+            return smallerArea > 0 && overlapArea * 2 >= smallerArea;
         }
 
         private static async Task<BrowserClickTarget> RefreshTargetAsync(
@@ -214,22 +410,54 @@ namespace CoffeeAutoButton
 
         private static async Task<List<BrowserDebugTarget>> GetTargetsAsync(int port, CancellationToken cancellationToken)
         {
-            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeoutCts.CancelAfter(ProbeTimeoutMs);
+            var allTargets = new List<BrowserDebugTarget>();
+            foreach (var host in LoopbackHosts)
+            {
+                using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                timeoutCts.CancelAfter(ProbeTimeoutMs);
 
-            try
-            {
-                using var client = new HttpClient
+                try
                 {
-                    Timeout = TimeSpan.FromMilliseconds(ProbeTimeoutMs)
-                };
-                var json = await client.GetStringAsync($"http://127.0.0.1:{port}/json/list", timeoutCts.Token);
-                return JsonSerializer.Deserialize<List<BrowserDebugTarget>>(json, JsonOptions) ?? new List<BrowserDebugTarget>();
+                    using var client = new HttpClient
+                    {
+                        Timeout = TimeSpan.FromMilliseconds(ProbeTimeoutMs)
+                    };
+                    var json = await client.GetStringAsync($"http://{host}:{port}/json/list", timeoutCts.Token);
+                    var targets = JsonSerializer.Deserialize<List<BrowserDebugTarget>>(json, JsonOptions);
+                    if (targets is null)
+                    {
+                        continue;
+                    }
+
+                    foreach (var target in targets)
+                    {
+                        target.WebSocketDebuggerUrl = NormalizeLoopbackWebSocketUrl(target.WebSocketDebuggerUrl, host, port);
+                        allTargets.Add(target);
+                    }
+                }
+                catch
+                {
+                    // Either IPv4 or IPv6 loopback may be unavailable; keep probing the other endpoint.
+                }
             }
-            catch
+
+            return allTargets;
+        }
+
+        private static string NormalizeLoopbackWebSocketUrl(string webSocketDebuggerUrl, string host, int port)
+        {
+            if (string.IsNullOrWhiteSpace(webSocketDebuggerUrl))
             {
-                return new List<BrowserDebugTarget>();
+                return string.Empty;
             }
+
+            var normalizedHost = string.Equals(host, "[::1]", StringComparison.Ordinal)
+                ? "[::1]"
+                : "127.0.0.1";
+            var pathStart = webSocketDebuggerUrl.IndexOf("/devtools/", StringComparison.OrdinalIgnoreCase);
+            return pathStart >= 0
+                ? $"ws://{normalizedHost}:{port}{webSocketDebuggerUrl[pathStart..]}"
+                : webSocketDebuggerUrl;
         }
 
         private static async Task<BrowserPoint> NormalizeClientPointAsync(
@@ -291,6 +519,18 @@ namespace CoffeeAutoButton
             }
 
             return property.ValueKind == JsonValueKind.Number && property.TryGetDouble(out var value)
+                ? value
+                : fallback;
+        }
+
+        private static int TryGetInt(JsonElement element, string name, int fallback)
+        {
+            if (!element.TryGetProperty(name, out var property))
+            {
+                return fallback;
+            }
+
+            return property.ValueKind == JsonValueKind.Number && property.TryGetInt32(out var value)
                 ? value
                 : fallback;
         }
@@ -430,6 +670,10 @@ namespace CoffeeAutoButton
 
             public string WebSocketDebuggerUrl { get; set; } = string.Empty;
         }
+
+        private sealed record BrowserWindowTargetCandidate(BrowserDebugTarget Target, int Score);
+
+        private readonly record struct BrowserWindowBounds(int Left, int Top, int Right, int Bottom);
 
         private static BrowserClickTarget CreateClickTarget(int port, BrowserDebugTarget target)
         {
