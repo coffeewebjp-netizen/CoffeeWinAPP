@@ -16,7 +16,7 @@ Coffee AutoButton は、指定したキー入力またはクリック操作を�
 
 ## 全体構成
 
-- `MainWindow`: WPF UI、設定反映、実行制御、対象位置取得。
+- `MainWindow`: WPF UI ファサード。設定/ホットキーは `MainWindow.Presets.cs`、実行制御は `MainWindow.RunLoop.cs`、対象位置取得は `MainWindow.TargetWindow.cs`。
 - `KeyboardInputService`: キー入力、修飾キー、長押し、シーケンス送信。
 - `MouseClickService`: 非ブラウザ向け Win32 メッセージクリックと物理クリック。
 - `BrowserDirectClickService`: 専用ブラウザの CDP 検出とクリック送信。

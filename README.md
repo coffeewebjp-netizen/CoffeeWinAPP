@@ -60,6 +60,8 @@ CoffeeBook など同じ `9223` の CDP ポートを使うツールと同時利�
 - `presets.json`: プリセット
 - `dedicated-browser-profile`: 専用ブラウザのプロファイル
 
+設計情報の入口は `docs/DESIGN_INDEX.md` です。
+
 ## ビルド
 
 必要な SDK は .NET 10 です。`global.json` で `10.0.300` を基準にしています。

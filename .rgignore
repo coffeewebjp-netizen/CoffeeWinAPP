@@ -1,0 +1,8 @@
+bin/
+obj/
+publish/
+installer/out/
+installer/payload/
+.vs/
+.tools/
+.wix/
